@@ -1,0 +1,4 @@
+#!/bin/sh
+# Never silently re-enable native RA when removing this package.
+service ipv6_ha onestop || true
+printf 'ipv6_ha_enable="NO"\n' > /etc/rc.conf.d/ipv6_ha

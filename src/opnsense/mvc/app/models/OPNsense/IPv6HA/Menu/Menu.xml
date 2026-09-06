@@ -1,0 +1,5 @@
+<menu>
+  <Services>
+    <IPv6HA VisibleName="IPv6 HA" cssClass="fa fa-exchange fa-fw" url="/ui/ipv6ha/" order="550"/>
+  </Services>
+</menu>

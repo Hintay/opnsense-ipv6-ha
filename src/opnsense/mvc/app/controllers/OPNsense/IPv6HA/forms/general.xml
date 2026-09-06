@@ -1,0 +1,20 @@
+<form>
+  <field>
+    <id>ipv6ha.general.enabled</id>
+    <label>Enable IPv6 HA</label>
+    <type>checkbox</type>
+    <help>Provide IPv6 service on the selected LAN from the active firewall.</help>
+  </field>
+  <field>
+    <id>ipv6ha.general.maintenance</id>
+    <label>Maintenance mode on this node</label>
+    <type>checkbox</type>
+    <help>Pause Router Advertisements on this node. This setting persists across reboots.</help>
+  </field>
+  <field>
+    <id>ipv6ha.general.lan_interface</id>
+    <label>LAN interface</label>
+    <type>dropdown</type>
+    <help>Select the LAN that should provide highly available IPv6 service.</help>
+  </field>
+</form>

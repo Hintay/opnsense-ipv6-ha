@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+/usr/local/bin/php /usr/local/opnsense/scripts/IPv6HA/migrate.php
+rm -f /tmp/opnsense_menu_cache.xml /tmp/opnsense_acl_cache.json
+service configd restart
+configctl syslog restart
+/usr/local/opnsense/scripts/IPv6HA/control.py apply
+# The migrated maintenance setting now belongs to config.xml.
+rm -f /var/run/ipv6-ha-maintenance
+if [ -f /conf/ipv6-ha-standalone-backup/ipv6-ha.py ]; then
+    rm -f /usr/local/sbin/ipv6-ha.py
+fi
+echo 'IPv6 HA installed: Services > IPv6 HA. Configuration is local to each node.'

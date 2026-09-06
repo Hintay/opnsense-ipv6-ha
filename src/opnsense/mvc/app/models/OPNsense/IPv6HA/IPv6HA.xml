@@ -1,0 +1,21 @@
+<model>
+  <mount>//OPNsense/IPv6HA</mount>
+  <version>1.0.0</version>
+  <description>Node-local dynamic-PD IPv6 high availability</description>
+  <items>
+    <general>
+      <enabled type="BooleanField">
+        <Default>0</Default>
+        <Required>Y</Required>
+      </enabled>
+      <maintenance type="BooleanField">
+        <Default>0</Default>
+        <Required>Y</Required>
+      </maintenance>
+      <lan_interface type="InterfaceField">
+        <Default>lan</Default>
+        <Required>Y</Required>
+      </lan_interface>
+    </general>
+  </items>
+</model>

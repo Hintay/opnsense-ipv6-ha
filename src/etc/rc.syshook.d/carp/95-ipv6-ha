@@ -1,0 +1,5 @@
+#!/bin/sh
+# Wake the supervisor after a CARP transition; polling also covers missed events.
+if [ -f /var/run/ipv6_ha.child.pid ]; then
+    /bin/pkill -USR1 -F /var/run/ipv6_ha.child.pid 2>/dev/null || true
+fi

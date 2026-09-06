@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: OPNsense documentation
+    url: https://docs.opnsense.org/
+    about: Review the OPNsense documentation for general configuration questions.

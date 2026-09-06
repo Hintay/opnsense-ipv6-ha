@@ -1,0 +1,16 @@
+#!/bin/sh
+# PROVIDE: ipv6_ha
+# REQUIRE: NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+name="ipv6_ha"
+rcvar="ipv6_ha_enable"
+pidfile="/var/run/ipv6_ha.pid"
+procname="/usr/sbin/daemon"
+command="/usr/sbin/daemon"
+command_args="-f -r -R 2 -H -P ${pidfile} -p /var/run/ipv6_ha.child.pid -o /var/log/ipv6-ha.log /usr/local/bin/python3 /usr/local/opnsense/scripts/IPv6HA/guard.py"
+start_precmd="/usr/local/opnsense/scripts/IPv6HA/control.py prepare"
+load_rc_config "$name"
+: ${ipv6_ha_enable:="NO"}
+run_rc_command "$1"

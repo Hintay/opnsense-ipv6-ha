@@ -1,0 +1,22 @@
+<acl>
+  <page-services-ipv6ha-read>
+    <name>Services: IPv6 HA (read)</name>
+    <description>View IPv6 HA settings, status and logs</description>
+    <patterns>
+      <pattern>ui/ipv6ha/*</pattern>
+      <pattern>api/ipv6ha/settings/get</pattern>
+      <pattern>api/ipv6ha/radvd/get</pattern>
+      <pattern>api/ipv6ha/service/status</pattern>
+      <pattern>api/diagnostics/log/core/ipv6ha</pattern>
+      <pattern>api/diagnostics/log/core/ipv6ha/export</pattern>
+    </patterns>
+  </page-services-ipv6ha-read>
+  <page-services-ipv6ha-write>
+    <name>Services: IPv6 HA (configure)</name>
+    <description>Configure and apply IPv6 HA settings on this node</description>
+    <patterns>
+      <pattern>ui/ipv6ha/*</pattern>
+      <pattern>api/ipv6ha/*</pattern>
+    </patterns>
+  </page-services-ipv6ha-write>
+</acl>

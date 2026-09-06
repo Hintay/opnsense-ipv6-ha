@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem with the plugin
+title: '[Bug] '
+labels:
+  - bug
+body:
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      placeholder: '1.0'
+    validations:
+      required: true
+  - type: input
+    id: opnsense-version
+    attributes:
+      label: OPNsense version
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem description
+      description: Describe the expected and observed behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove credentials, public addresses, interface identifiers, and other sensitive values.
+      render: shell
+  - type: checkboxes
+    id: redaction
+    attributes:
+      label: Data handling
+      options:
+        - label: I removed credentials and environment-specific network information.
+          required: true
