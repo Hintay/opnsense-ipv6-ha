@@ -1,4 +1,4 @@
-# OPNsense IPv6 HA
+# OPNsense IPv6 High Availability
 
 [简体中文](README.zh-CN.md)
 
