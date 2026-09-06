@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Validate repository
+        run: python tools/check_repository.py
+
+      - name: Check PHP syntax
+        run: find src tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Check shell syntax
+        run: |
+          find tests -type f -name '*.sh' -print0 | xargs -0 -r -n1 sh -n
+          for script in pkg/*; do sh -n "$script"; done
+
+  freebsd-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Run tests on FreeBSD
+        uses: vmactions/freebsd-vm@v1.5.5
+        with:
+          release: '15.0'
+          prepare: pkg install -y python313
+          run: |
+            /usr/local/bin/python3.13 -m unittest discover -s tests -p 'test_*.py'
+            /usr/local/bin/python3.13 tools/check_repository.py

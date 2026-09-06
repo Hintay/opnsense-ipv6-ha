@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      OPNSENSE_VERSION: '26.7'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Validate tag and repository
+        run: python tools/check_repository.py
+
+      - name: Set reproducible build timestamp
+        run: |
+          timestamp="$(git show -s --format=%ct "${GITHUB_SHA}")"
+          echo "SOURCE_DATE_EPOCH=${timestamp}" >> "${GITHUB_ENV}"
+
+      - name: Build package on FreeBSD
+        uses: vmactions/freebsd-vm@v1.5.5
+        with:
+          release: '15.0'
+          envs: 'OPNSENSE_VERSION SOURCE_DATE_EPOCH GITHUB_REPOSITORY'
+          prepare: pkg install -y python313 radvd
+          run: |
+            set -eu
+            /usr/local/bin/python3.13 -m unittest discover -s tests -p 'test_*.py'
+            /usr/local/bin/python3.13 tools/build.py
+            version="${GITHUB_REF_NAME#v}"
+            /usr/local/sbin/pkg info -F "dist/os-ipv6-ha-${version}.pkg"
+
+      - name: Create release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          git archive \
+            --format=tar.gz \
+            --prefix="os-ipv6-ha-${version}/" \
+            --output="dist/os-ipv6-ha-${version}-source.tar.gz" \
+            "${GITHUB_SHA}"
+          cd dist
+          sha256sum \
+            "os-ipv6-ha-${version}.pkg" \
+            "os-ipv6-ha-${version}-source.tar.gz" > SHA256SUMS
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ github.ref_name }}
+          path: |
+            dist/os-ipv6-ha-*.pkg
+            dist/os-ipv6-ha-*-source.tar.gz
+            dist/SHA256SUMS
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download release assets
+        uses: actions/download-artifact@v8
+        with:
+          name: release-${{ github.ref_name }}
+          path: dist
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --verify-tag \
+            --draft \
+            --generate-notes \
+            --title "${GITHUB_REF_NAME}" \
+            "dist/os-ipv6-ha-${GITHUB_REF_NAME#v}.pkg" \
+            "dist/os-ipv6-ha-${GITHUB_REF_NAME#v}-source.tar.gz" \
+            dist/SHA256SUMS
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
