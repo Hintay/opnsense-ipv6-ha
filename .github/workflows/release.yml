@@ -61,9 +61,17 @@ jobs:
             --output="dist/os-ipv6-ha-${version}-source.tar.gz" \
             "${GITHUB_SHA}"
           cd dist
-          sha256sum \
+          for FILE in \
             "os-ipv6-ha-${version}.pkg" \
-            "os-ipv6-ha-${version}-source.tar.gz" > SHA256SUMS
+            "os-ipv6-ha-${version}-source.tar.gz"
+          do
+            DGST="${FILE}.dgst"
+            : > "${DGST}"
+            for METHOD in md5 sha1 sha256 sha512
+            do
+              openssl dgst "-${METHOD}" "${FILE}" | sed 's/([^)]*)//g' >> "${DGST}"
+            done
+          done
 
       - name: Upload release assets
         uses: actions/upload-artifact@v7
@@ -71,8 +79,9 @@ jobs:
           name: release-${{ github.ref_name }}
           path: |
             dist/os-ipv6-ha-*.pkg
+            dist/os-ipv6-ha-*.pkg.dgst
             dist/os-ipv6-ha-*-source.tar.gz
-            dist/SHA256SUMS
+            dist/os-ipv6-ha-*-source.tar.gz.dgst
           if-no-files-found: error
 
   release:
@@ -102,8 +111,9 @@ jobs:
             --generate-notes \
             --title "${GITHUB_REF_NAME}" \
             "dist/os-ipv6-ha-${GITHUB_REF_NAME#v}.pkg" \
+            "dist/os-ipv6-ha-${GITHUB_REF_NAME#v}.pkg.dgst" \
             "dist/os-ipv6-ha-${GITHUB_REF_NAME#v}-source.tar.gz" \
-            dist/SHA256SUMS
+            "dist/os-ipv6-ha-${GITHUB_REF_NAME#v}-source.tar.gz.dgst"
 
       - name: Publish release
         env:

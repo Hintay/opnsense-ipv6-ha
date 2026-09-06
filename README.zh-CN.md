@@ -38,10 +38,18 @@ OPNsense IPv6 HA 用于协调 CARP 主备节点上的路由通告，适用于上
 
 ## 安装
 
-从 GitHub Release 下载 `os-ipv6-ha-1.0.pkg` 和 `SHA256SUMS`，复制到防火墙并校验：
+从 GitHub Release 下载 `os-ipv6-ha-1.0.pkg` 并复制到防火墙。`os-ipv6-ha-1.0.pkg.dgst` 是可选的，可用于校验下载文件：
 
 ```sh
-grep "$(sha256 -q os-ipv6-ha-1.0.pkg)" SHA256SUMS
+FILE=os-ipv6-ha-1.0.pkg
+for METHOD in md5 sha1 sha256 sha512; do
+  openssl dgst "-${METHOD}" "$FILE" | sed 's/([^)]*)//g'
+done | diff -u "$FILE.dgst" -
+```
+
+安装插件：
+
+```sh
 pkg add -f ./os-ipv6-ha-1.0.pkg
 ```
 

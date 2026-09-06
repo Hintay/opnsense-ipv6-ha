@@ -54,9 +54,16 @@ def main():
             raise ValueError(f'Environment-specific value remains in public files: {value}')
 
     expected_package = f'os-ipv6-ha-{version}.pkg'
+    expected_digest = f'{expected_package}.dgst'
     for readme in ('README.md', 'README.zh-CN.md'):
-        if expected_package not in (ROOT / readme).read_text(encoding='utf-8'):
+        readme_text = (ROOT / readme).read_text(encoding='utf-8')
+        if expected_package not in readme_text:
             raise ValueError(f'{readme} does not reference {expected_package}')
+        if expected_digest not in readme_text:
+            raise ValueError(f'{readme} does not reference {expected_digest}')
+
+    if 'SHA256' + 'SUMS' in public_text:
+        raise ValueError('Release documentation must use per-file .dgst files')
 
     print(f'Repository checks passed for version {version}')
 

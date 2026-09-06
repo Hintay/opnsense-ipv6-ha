@@ -38,10 +38,18 @@ When PPPoE should connect or disconnect with the CARP role, configure that behav
 
 ## Installation
 
-Download `os-ipv6-ha-1.0.pkg` and `SHA256SUMS` from the GitHub release, copy both files to the firewall, and verify the package before installation:
+Download `os-ipv6-ha-1.0.pkg` from the GitHub release and copy it to the firewall. The matching `os-ipv6-ha-1.0.pkg.dgst` file is optional and can be used to verify the download:
 
 ```sh
-grep "$(sha256 -q os-ipv6-ha-1.0.pkg)" SHA256SUMS
+FILE=os-ipv6-ha-1.0.pkg
+for METHOD in md5 sha1 sha256 sha512; do
+  openssl dgst "-${METHOD}" "$FILE" | sed 's/([^)]*)//g'
+done | diff -u "$FILE.dgst" -
+```
+
+Install the package:
+
+```sh
 pkg add -f ./os-ipv6-ha-1.0.pkg
 ```
 
