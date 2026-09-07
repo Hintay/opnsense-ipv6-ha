@@ -1,0 +1,6 @@
+# Drop the removed configd actions and syslog filter; caches were flushed above.
+if [ -x /usr/local/sbin/pluginctl ]; then
+	pluginctl -s configd restart
+	pluginctl -s syslog restart
+fi
+echo 'IPv6 HA removed; config.xml and prefix history retained. Router Advertisement settings remain unchanged.'

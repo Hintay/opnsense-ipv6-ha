@@ -1,0 +1,3 @@
+if [ -f /usr/local/etc/rc.d/ipv6_ha ]; then
+	service ipv6_ha onestop || true
+fi

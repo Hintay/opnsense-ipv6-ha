@@ -1,23 +1,54 @@
 #!/usr/local/bin/python3
-"""Fixed configd actions; accept no command strings or user-controlled paths."""
+"""Fixed configd actions; accept no command strings or user-controlled paths.
+
+Thin client of the guard's control socket. Prints one JSON object; exits 1 on failure so
+rc.d precmds and hooks can rely on the exit code while configd still gets structured output.
+"""
 import fcntl
 import json
 import os
 from pathlib import Path
+import socket
 import subprocess
 import sys
-import time
 
-from settings import validate_config, config_hash
+from settings import validate_config
 
 ROOT = Path('/usr/local/opnsense/scripts/IPv6HA')
 CONFIG = Path('/usr/local/etc/ipv6-ha.json')
-STATUS = Path('/var/run/ipv6-ha-status.json')
 RC = Path('/etc/rc.conf.d/ipv6_ha')
+SOCKET = '/var/run/ipv6-ha.sock'
+LOCK = '/var/run/ipv6-ha-apply.lock'
+INHERITED = ('lan_interface', 'wan_interface', 'vip', 'vhid', 'normal_skew', 'mtu', 'min_interval',
+             'max_interval', 'router_lifetime', 'preferred_lifetime', 'valid_lifetime')
+STOPPED = {'ready': False, 'ra_running': False, 'reason': 'Service stopped'}
 
 
 def run(*args, timeout=30):
     return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+
+
+def ask(command, timeout=3):
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        sock.connect(SOCKET)
+        sock.sendall(json.dumps({'command': command}).encode() + b'\n')
+        data = b''
+        while not data.endswith(b'\n'):
+            chunk = sock.recv(65536)
+            if not chunk:
+                break
+            data += chunk
+    reply = json.loads(data.decode() or 'null')
+    return reply if isinstance(reply, dict) else None
+
+
+def query(command):
+    """Return the guard's reply, or None when the service is not running."""
+    try:
+        return ask(command)
+    except (OSError, ValueError):
+        return None
 
 
 def exported():
@@ -27,8 +58,15 @@ def exported():
     return validate_config(json.loads(result.stdout))
 
 
+def applied_config():
+    try:
+        return validate_config(json.loads(CONFIG.read_text()))
+    except (OSError, ValueError):
+        return None
+
+
 def validate_ra(c):
-    # Let the installed radvd validate inherited options before stopping the old service.
+    # Let the installed radvd validate inherited options before touching the running service.
     import tempfile
     from guard import render
     with tempfile.NamedTemporaryFile(mode='w', suffix='.conf') as handle:
@@ -55,65 +93,54 @@ def prepare(c=None):
     return c
 
 
-def process_alive(pid, needle):
-    try:
-        result = run('/bin/ps', '-p', str(int(pid)), '-o', 'command=', timeout=5)
-        return result.returncode == 0 and needle in result.stdout
-    except (ValueError, TypeError):
-        return False
+def service(verb, tolerated):
+    result = run('/usr/sbin/service', 'ipv6_ha', verb)
+    output = result.stdout + result.stderr
+    if result.returncode and tolerated not in output:
+        raise RuntimeError(verb.capitalize() + ' failed: ' + output)
 
 
 def status():
-    try:
-        data = json.loads(STATUS.read_text())
-    except (OSError, ValueError):
-        data = {}
-    try:
-        pid = int(Path('/var/run/ipv6_ha.child.pid').read_text())
-    except (OSError, ValueError):
-        pid = 0
-    running = pid > 1 and process_alive(pid, str(ROOT / 'guard.py'))
-    elapsed = time.monotonic() - data.get('monotonic_updated', -1e12)
-    fresh = running and data.get('process_pid') == pid and 0 <= elapsed < 65
-    result = {'status': 'ok', 'service_running': running, 'fresh': fresh,
-              'age_seconds': round(elapsed, 1) if 0 <= elapsed < 1e9 else None, 'node': os.uname().nodename,
-              'runtime': data, 'applied': False}
-    try:
-        c = exported()
+    runtime = query('status')
+    running = runtime is not None
+    result = {'status': 'ok', 'service_running': running, 'node': os.uname().nodename,
+              'runtime': runtime if running else dict(STOPPED), 'inherited': {}}
+    c = applied_config()
+    if c is not None:
         result.update(enabled=c['enabled'], maintenance=c['maintenance'],
-                      applied=(data.get('config_hash') == config_hash(c)) if running else not c['enabled'],
-                      configuration_valid=True)
-        result['inherited'] = {k: c[k] for k in ('lan_interface', 'wan_interface', 'vip', 'vhid',
-            'normal_skew', 'mtu', 'min_interval', 'max_interval', 'router_lifetime', 'preferred_lifetime', 'valid_lifetime') if k in c}
-    except Exception as error:
-        result.update(configuration_valid=False, configuration_error=str(error))
-    if not fresh:
-        result['runtime'] = {**data, 'ready': False, 'ra_running': False,
-                             'reason': 'Service stopped or runtime status is stale'}
+                      inherited={k: c[k] for k in INHERITED if k in c})
     return result
 
 
-def apply():
-    # Validate before stopping a healthy running service.
+def apply(force_restart=False):
+    # Validate before touching a healthy running service.
     c = exported()
     if c['enabled']:
         validate_ra(c)
     previous = CONFIG.read_bytes() if CONFIG.exists() else None
     previous_rc = RC.read_bytes() if RC.exists() else None
-    stopped = run('/usr/sbin/service', 'ipv6_ha', 'onestop')
-    if stopped.returncode and 'not running' not in stopped.stdout + stopped.stderr:
-        raise RuntimeError(stopped.stdout + stopped.stderr)
     prepare(c)
-    if c['enabled']:
-        started = run('/usr/sbin/service', 'ipv6_ha', 'onestart')
-        if started.returncode:
-            # Preserve the old runtime configuration for an explicit recovery.
-            if previous is not None:
-                write(CONFIG, previous.decode())
-            if previous_rc is not None:
-                write(RC, previous_rc.decode())
-            raise RuntimeError('Start failed: ' + started.stdout + started.stderr)
-    return {'status': 'ok', 'message': 'Configuration applied; waiting for local events.' if c['enabled'] else 'Service disabled.'}
+    running = query('status') is not None
+    if not c['enabled']:
+        if running:
+            service('onestop', 'not running')
+        return {'status': 'ok', 'message': 'Service disabled.'}
+    if running and not force_restart:
+        reply = query('reload')
+        if reply is not None and reply.get('status') == 'ok' and not reply.get('restart'):
+            return {'status': 'ok', 'message': 'Configuration applied.'}
+    if running:
+        service('onestop', 'not running')
+    try:
+        service('onestart', 'already running')
+    except RuntimeError:
+        # Preserve the old runtime configuration for an explicit recovery.
+        if previous is not None:
+            write(CONFIG, previous.decode())
+        if previous_rc is not None:
+            write(RC, previous_rc.decode())
+        raise
+    return {'status': 'ok', 'message': 'Configuration applied; service restarted.'}
 
 
 def start():
@@ -122,23 +149,36 @@ def start():
         raise ValueError('IPv6 HA is disabled')
     validate_ra(c)
     prepare(c)
-    result = run('/usr/sbin/service', 'ipv6_ha', 'onestart')
-    if result.returncode and 'already running' not in result.stdout + result.stderr:
-        raise RuntimeError('Start failed: ' + result.stdout + result.stderr)
+    service('onestart', 'already running')
     return {'status': 'ok', 'message': 'Service started.'}
 
 
 def stop():
-    result = run('/usr/sbin/service', 'ipv6_ha', 'onestop')
-    if result.returncode and 'not running' not in result.stdout + result.stderr:
-        raise RuntimeError('Stop failed: ' + result.stdout + result.stderr)
+    service('onestop', 'not running')
     return {'status': 'ok', 'message': 'Service stopped.'}
+
+
+def wake():
+    if query('wake') is None:
+        raise ValueError('Service is not running.')
+    return {'status': 'ok'}
+
+
+def locked(action):
+    with open(LOCK, 'w') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError('Another operation is in progress.') from None
+        return action()
 
 
 def main():
     action = sys.argv[1] if len(sys.argv) == 2 else ''
     if action == 'status':
         return status()
+    if action == 'wake':
+        return wake()
     if action == 'check':
         exported()
         return {'status': 'ok', 'message': 'Configuration check passed.'}
@@ -148,17 +188,13 @@ def main():
             raise ValueError('IPv6 HA is disabled')
         return {'status': 'ok'}
     if action == 'apply':
-        with open('/var/run/ipv6-ha-apply.lock', 'w') as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return apply()
-    if action in ('start', 'restart', 'stop'):
-        with open('/var/run/ipv6-ha-apply.lock', 'w') as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            if action == 'start':
-                return start()
-            if action == 'restart':
-                return apply()
-            return stop()
+        return locked(apply)
+    if action == 'restart':
+        return locked(lambda: apply(force_restart=True))
+    if action == 'start':
+        return locked(start)
+    if action == 'stop':
+        return locked(stop)
     raise ValueError('Unknown action')
 
 
@@ -168,3 +204,4 @@ if __name__ == '__main__':
     except Exception as exc:
         # Configd needs structured output even when a requested operation is rejected.
         print(json.dumps({'status': 'failed', 'message': str(exc)}))
+        sys.exit(1)

@@ -1,0 +1,4 @@
+# The generated part above already restarted configd, flushed caches and reloaded syslog.
+/usr/local/bin/php /usr/local/opnsense/scripts/IPv6HA/migrate.php
+/usr/local/opnsense/scripts/IPv6HA/control.py apply || true
+echo 'IPv6 HA installed: Services > IPv6 HA. Configuration is local to each node.'

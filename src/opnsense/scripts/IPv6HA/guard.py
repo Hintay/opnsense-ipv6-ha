@@ -17,15 +17,19 @@ import sys
 import syslog
 import time
 
-from settings import validate_config, config_hash
+from settings import validate_config
 
 CONFIG = Path('/usr/local/etc/ipv6-ha.json')
 STATUS = Path('/var/run/ipv6-ha-status.json')
 HISTORY = Path('/conf/ipv6-ha-prefixes.json')
 RA_CONFIG = Path('/var/run/ipv6-ha-radvd.conf')
 RA_PID = '/var/run/ipv6-ha-radvd.pid'
+SOCKET = Path('/var/run/ipv6-ha.sock')
 SCRIPT = '/usr/local/opnsense/scripts/IPv6HA/guard.py'
 WATCHDOG_INTERVAL = 30
+GLOBAL_UNICAST = ipaddress.IPv6Network('2000::/3')
+REASON_STANDBY = 'Standby; waiting for CARP takeover'
+REASON_UNSTABLE = 'Waiting for a stable CARP role'
 
 
 def run(*args, timeout=4):
@@ -48,8 +52,8 @@ def atomic_json(path, value):
 
 
 def log(message):
+    # Syslog is the single log channel; stderr only carries tracebacks via daemon(8).
     syslog.syslog(syslog.LOG_NOTICE, message)
-    print(time.strftime('%Y-%m-%d %H:%M:%S'), message, flush=True)
 
 
 def carp_state(text, vhid):
@@ -58,16 +62,30 @@ def carp_state(text, vhid):
     return (match[1], int(match[3])) if match else ('MISSING', None)
 
 
+def delegated_prefixes(text):
+    """ifctl appends one delegated prefix per line; several PDs are possible."""
+    prefixes = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        prefix = ipaddress.IPv6Network(line)
+        if not prefix.subnet_of(GLOBAL_UNICAST):
+            raise ValueError('Delegated prefix is not global unicast')
+        prefixes.append(prefix)
+    if not prefixes:
+        raise ValueError('No delegated prefix on the uplink')
+    return prefixes
+
+
 def pd_address(text, delegated):
-    pd = ipaddress.IPv6Network(delegated.strip())
-    if not pd.subnet_of(ipaddress.IPv6Network('2000::/3')):
-        raise ValueError('PD is not global unicast')
+    pds = delegated_prefixes(delegated)
     found = []
     for line in text.splitlines():
         match = re.search(r'inet6 ([0-9a-f:]+) prefixlen 64(?: |$)', line)
         if match and not any(flag in line for flag in ('tentative', 'duplicated', 'deprecated', 'pltime 0 ')):
             addr = ipaddress.IPv6Address(match[1])
-            if addr in pd:
+            if any(addr in pd for pd in pds):
                 found.append((str(addr), str(ipaddress.IPv6Network(str(addr) + '/64', strict=False))))
     if len(found) != 1:
         raise ValueError('Expected exactly one live LAN /64 inside current PD')
@@ -89,7 +107,7 @@ def parse_ra(data):
         if kind == 3 and length == 32 and option[2] == 64 and option[3] & 0x40:
             valid, preferred = struct.unpack('!II', option[4:12])
             net = ipaddress.IPv6Network((ipaddress.IPv6Address(option[16:32]), 64), strict=False)
-            if 0 < preferred <= valid and net.subnet_of(ipaddress.IPv6Network('2000::/3')):
+            if 0 < preferred <= valid and net.subnet_of(GLOBAL_UNICAST):
                 prefixes.append((str(net), min(valid, 7200)))
         offset += length
     return prefixes
@@ -99,7 +117,7 @@ def render(c, current, old):
     ra = c.get('ra', {})
     mode = ra.get('mode', 'unmanaged')
     lines = [
-        '# Managed by ipv6-ha.py; the system Router Advertisements entry must remain disabled.',
+        '# Managed by IPv6 HA (guard.py); the system Router Advertisements entry must remain disabled.',
         f'interface {c["lan"]} {{',
         ' AdvSendAdvert on;',
         f' MinRtrAdvInterval {c.get("min_interval", 3)};',
@@ -136,6 +154,9 @@ def render(c, current, old):
 
 
 class Guard:
+    # Changing any of these needs a fresh raw socket / interface index: ask control.py for a restart.
+    IDENTITY_KEYS = ('lan', 'wan', 'vip', 'vhid')
+
     def __init__(self, c):
         self.c = c
         self.identity = None
@@ -143,13 +164,15 @@ class Guard:
         self.rendered = None
         self.running = True
         self.last_status = None
+        self.status = {'ready': False, 'ra_running': False, 'reason': REASON_UNSTABLE}
+        self.last_tick = None
         self.last_history_save = 0
         self.last_ra_seen = None
         self.last_solicit = 0
         self.started = time.monotonic()
         try:
             self.history = json.loads(HISTORY.read_text())
-        except FileNotFoundError:
+        except (FileNotFoundError, ValueError):
             self.history = {}
         self.sock = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.IPPROTO_ICMPV6)
         self.sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_RECVPKTINFO, 1)
@@ -198,33 +221,36 @@ class Guard:
 
     def snapshot(self):
         c = self.c
-        lan = run('/sbin/ifconfig', c['lan']).stdout
-        state, skew = carp_state(lan, c['vhid'])
-        result = {'carp': state, 'skew': skew, 'uplink_up': None, 'ready': False}
+        result = {'carp': 'MISSING', 'skew': None, 'uplink_up': None, 'ready': False}
         try:
-            if 'status: active' not in lan or state == 'MISSING':
+            lan = run('/sbin/ifconfig', c['lan']).stdout
+            state, skew = carp_state(lan, c['vhid'])
+            result.update(carp=state, skew=skew)
+            # Bridges report no media status line at all; only distrust an explicit inactive link.
+            if ('status:' in lan and 'status: active' not in lan) or state == 'MISSING':
                 raise ValueError('LAN or CARP unavailable')
             if run('/sbin/sysctl', '-n', 'net.inet.carp.allow').stdout.strip() != '1':
                 raise ValueError('CARP administratively disabled')
-            if c.get('maintenance', False) or Path('/var/run/ipv6-ha-maintenance').exists():
+            if c.get('maintenance', False):
                 raise ValueError('IPv6 HA maintenance enabled')
-        except (ValueError, OSError) as exc:
-            result['reason'] = str(exc)
-            return result
-        if state != 'MASTER':
-            result['reason'] = ('Standby; waiting for CARP takeover' if state == 'BACKUP'
-                                else 'Waiting for a stable CARP role')
-            return result
-        try:
+            if state != 'MASTER':
+                result['reason'] = REASON_STANDBY if state == 'BACKUP' else REASON_UNSTABLE
+                return result
             wan = run('/sbin/ifconfig', c['wan']).stdout
             result['uplink_up'] = bool(re.search(r'<UP,[^>]*RUNNING', wan))
             if not result['uplink_up']:
                 raise ValueError('Uplink is not running')
-            addr, prefix = pd_address(lan, self.prefix_file.read_text())
+            try:
+                delegated = self.prefix_file.read_text()
+            except FileNotFoundError:
+                raise ValueError('No delegated prefix on the uplink') from None
+            addr, prefix = pd_address(lan, delegated)
             route = run('/sbin/route', '-n', 'get', '-inet6', 'default').stdout
             if not re.search(r'interface:\s+' + re.escape(c['wan']) + r'\s', route):
                 raise ValueError('IPv6 default route is not the tracked uplink')
             result.update(ready=True, address=addr, prefix=prefix, reason='Uplink, PD and route ready')
+        except subprocess.TimeoutExpired:
+            result['reason'] = 'System command timed out'
         except (ValueError, OSError) as exc:
             result['reason'] = str(exc)
         return result
@@ -256,12 +282,14 @@ class Guard:
         if not s['ready']:
             self.stop_ra()
         # Re-read ownership immediately before starting Router Advertisements.
-        state, actual = carp_state(run('/sbin/ifconfig', self.c['lan']).stdout, self.c['vhid'])
+        try:
+            state, actual = carp_state(run('/sbin/ifconfig', self.c['lan']).stdout, self.c['vhid'])
+        except subprocess.TimeoutExpired:
+            state, actual = 'MISSING', None
         if state != s['carp']:
             s['carp'] = state
             if state != 'MASTER':
-                s.update(ready=False, reason=('Standby; waiting for CARP takeover' if state == 'BACKUP'
-                                               else 'Waiting for a stable CARP role'))
+                s.update(ready=False, reason=REASON_STANDBY if state == 'BACKUP' else REASON_UNSTABLE)
         if s['ready'] and state == 'MASTER':
             self.history[s['prefix']] = time.time() + self.c.get('valid_lifetime', 300)
             old = [p for p, expiry in self.history.items() if expiry > time.time() and p != s['prefix']]
@@ -283,20 +311,34 @@ class Guard:
         if now - self.last_history_save >= 60:
             atomic_json(HISTORY, self.history)
             self.last_history_save = now
-        status = {**s, 'carp': state, 'skew': actual,
-                  'ra_running': self.ra is not None and self.ra.poll() is None}
-        key = (state, status['uplink_up'], status['ready'], status['ra_running'], identity, s['reason'])
+        self.status = {**s, 'carp': state, 'skew': actual, 'updated': time.time(),
+                       'ra_running': self.ra is not None and self.ra.poll() is None,
+                       'maintenance': self.c.get('maintenance', False), 'learned_prefixes': self.history}
+        self.last_tick = now
+        key = (state, s['uplink_up'], s['ready'], self.status['ra_running'], identity, s['reason'])
         if key != self.last_status:
-            uplink = 'standby' if status['uplink_up'] is None else ('ready' if status['uplink_up'] else 'down')
+            uplink = 'standby' if s['uplink_up'] is None else ('ready' if s['uplink_up'] else 'down')
             log('State changed: CARP {carp}; uplink {uplink}; Router Advertisements {advertisements}; '
                 'prefix {prefix}; advskew {skew}; {reason}'.format(
                     carp=state or 'UNKNOWN', uplink=uplink,
-                    advertisements='active' if status['ra_running'] else 'silent',
+                    advertisements='active' if self.status['ra_running'] else 'silent',
                     prefix=s.get('prefix') or 'none', skew=actual, reason=s['reason']))
             self.last_status = key
-        atomic_json(STATUS, {**status, 'updated': time.time(), 'monotonic_updated': time.monotonic(),
-                            'process_pid': os.getpid(), 'config_hash': config_hash(self.c),
-                            'maintenance': self.c.get('maintenance', False), 'learned_prefixes': self.history})
+            # Last known state for post-mortem reading only; live queries use the control socket.
+            atomic_json(STATUS, self.status_reply())
+
+    def status_reply(self):
+        age = None if self.last_tick is None else round(time.monotonic() - self.last_tick, 1)
+        return {**self.status, 'age_seconds': age, 'process_pid': os.getpid(),
+                'source_hash': self.c.get('source_hash')}
+
+    def reload(self):
+        """Adopt a rewritten configuration in place; report when only a restart can apply it."""
+        new = validate_config(json.loads(CONFIG.read_text()))
+        if not new['enabled'] or any(new.get(k) != self.c.get(k) for k in self.IDENTITY_KEYS):
+            return {'status': 'ok', 'restart': True}
+        self.c = new
+        return {'status': 'ok', 'restart': False}
 
     def close(self):
         self.stop_ra()
@@ -304,10 +346,61 @@ class Guard:
         atomic_json(HISTORY, self.history)
 
 
+def handle_client(conn, guard):
+    """Serve one request on the control socket; return True when a tick should follow."""
+    needs_tick = False
+    try:
+        with conn:
+            conn.settimeout(1.0)
+            data = b''
+            while b'\n' not in data and len(data) < 4096:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+            try:
+                request = json.loads(data.decode() or '{}')
+            except ValueError:
+                request = {}
+            command = request.get('command') if isinstance(request, dict) else None
+            if command == 'status':
+                reply = {'status': 'ok', **guard.status_reply()}
+            elif command == 'check':
+                reply = {'status': 'ok', **guard.snapshot()}
+            elif command == 'wake':
+                reply, needs_tick = {'status': 'ok'}, True
+            elif command == 'reload':
+                try:
+                    reply, needs_tick = guard.reload(), True
+                except (OSError, ValueError) as exc:
+                    reply = {'status': 'failed', 'message': str(exc)}
+            else:
+                reply = {'status': 'failed', 'message': 'Unknown command'}
+            conn.sendall((json.dumps(reply) + '\n').encode())
+    except OSError:
+        pass
+    return needs_tick
+
+
+def listen():
+    try:
+        SOCKET.unlink()
+    except FileNotFoundError:
+        pass
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(str(SOCKET))
+    os.chmod(SOCKET, 0o600)
+    server.listen(8)
+    server.setblocking(False)
+    return server
+
+
 def exec_radvd():
     # FreeBSD PROC_PDEATHSIG_CTL makes a crashed supervisor fail closed.
     parent = os.getppid()
     libc = ctypes.CDLL('libc.so.7', use_errno=True)
+    libc.procctl.argtypes = [ctypes.c_int, ctypes.c_int64, ctypes.c_int, ctypes.c_void_p]
+    libc.procctl.restype = ctypes.c_int
     sig = ctypes.c_int(signal.SIGKILL)
     if libc.procctl(0, 0, 11, ctypes.byref(sig)) != 0:
         raise OSError(ctypes.get_errno(), 'Cannot install parent-death signal')
@@ -317,12 +410,22 @@ def exec_radvd():
                                     '-p', RA_PID, '-C', str(RA_CONFIG)])
 
 
+def build_guard(c):
+    # Interfaces may appear late during boot; keep the service alive instead of crash-looping.
+    warned = False
+    while True:
+        try:
+            return Guard(c)
+        except OSError as exc:
+            if not warned:
+                log('Waiting for interfaces: ' + str(exc))
+                warned = True
+            time.sleep(5)
+
+
 def main():
     if '--radvd' in sys.argv:
         exec_radvd()
-        return
-    if '--status' in sys.argv:
-        print(STATUS.read_text())
         return
     c = validate_config(json.loads(CONFIG.read_text()))
     if not c['enabled']:
@@ -335,7 +438,8 @@ def main():
     lock = open('/var/run/ipv6-ha.lock', 'w')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     syslog.openlog('ipv6-ha')
-    guard = Guard(c)
+    guard = build_guard(c)
+    server = listen()
     wake_read, wake_write = os.pipe2(os.O_NONBLOCK | os.O_CLOEXEC)
     watch_fd = os.open('/tmp', os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
     event_queue = select.kqueue()
@@ -343,6 +447,8 @@ def main():
         select.kevent(wake_read, filter=select.KQ_FILTER_READ,
                       flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_CLEAR),
         select.kevent(guard.sock.fileno(), filter=select.KQ_FILTER_READ,
+                      flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_CLEAR),
+        select.kevent(server.fileno(), filter=select.KQ_FILTER_READ,
                       flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_CLEAR),
         select.kevent(watch_fd, filter=select.KQ_FILTER_VNODE,
                       flags=select.KQ_EV_ADD | select.KQ_EV_ENABLE | select.KQ_EV_CLEAR,
@@ -383,6 +489,13 @@ def main():
                     needs_tick = True
                 elif event.ident == guard.sock.fileno():
                     guard.receive()
+                elif event.ident == server.fileno():
+                    while True:
+                        try:
+                            conn, _ = server.accept()
+                        except (BlockingIOError, OSError):
+                            break
+                        needs_tick = handle_client(conn, guard) or needs_tick
                 elif event.ident == watch_fd:
                     current = (path_signature(guard.uplink_marker), path_signature(guard.prefix_file))
                     if current != watched_uplink:
@@ -397,6 +510,11 @@ def main():
         os.close(watch_fd)
         os.close(wake_read)
         os.close(wake_write)
+        server.close()
+        try:
+            SOCKET.unlink()
+        except FileNotFoundError:
+            pass
         guard.close()
 
 

@@ -1,6 +1,4 @@
 /dist/
-/evidence/
-/VERIFICATION.md
 __pycache__/
 *.py[cod]
 *.log

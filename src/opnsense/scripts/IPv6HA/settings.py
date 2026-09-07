@@ -1,7 +1,5 @@
 """Validate exported settings again at the privileged process boundary."""
-import hashlib
 import ipaddress
-import json
 import re
 
 BOUNDS = {
@@ -12,6 +10,9 @@ BOUNDS = {
 
 
 def validate_config(c):
+    if c.get('source_hash') is not None and not (isinstance(c['source_hash'], str)
+                                                  and re.fullmatch(r'[0-9a-f]{64}', c['source_hash'])):
+        raise ValueError('Invalid source hash')
     if c.get('enabled') is False:
         if type(c.get('maintenance')) is not bool:
             raise ValueError('Invalid maintenance setting')
@@ -61,7 +62,3 @@ def validate_config(c):
             if prefix.prefixlen not in (32, 40, 48, 56, 64, 96):
                 raise ValueError('Invalid NAT64 prefix length')
     return c
-
-
-def config_hash(c):
-    return hashlib.sha256(json.dumps(c, sort_keys=True, separators=(',', ':')).encode()).hexdigest()

@@ -3,7 +3,7 @@
 function ipv6ha_configure()
 {
     return ['bootup' => ['ipv6ha_configure_do'], 'local' => ['ipv6ha_configure_do'],
-        'ipv6ha' => ['ipv6ha_configure_do'], 'radvd' => ['ipv6ha_configure_do'],
+        'ipv6ha' => ['ipv6ha_configure_do'],
         'newwanip' => ['ipv6ha_wake']];
 }
 
@@ -14,8 +14,9 @@ function ipv6ha_configure_do($verbose = false)
 
 function ipv6ha_wake($verbose = false)
 {
-    if (is_file('/var/run/ipv6_ha.child.pid')) {
-        mwexecf('/bin/pkill -USR1 -F /var/run/ipv6_ha.child.pid');
+    // Only a running guard listens; skip the call instead of logging a failed command.
+    if (file_exists('/var/run/ipv6-ha.sock')) {
+        mwexecf('/usr/local/opnsense/scripts/IPv6HA/control.py wake');
     }
 }
 

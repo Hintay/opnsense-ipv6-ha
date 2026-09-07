@@ -1,8 +1,35 @@
 <?php
+
+/*
+ * Copyright (c) 2026 IPv6 HA contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 namespace OPNsense\IPv6HA\Api;
 
 use OPNsense\Base\ApiMutableModelControllerBase;
 use OPNsense\Base\UserException;
+use OPNsense\IPv6HA\I18n;
 
 class RadvdController extends ApiMutableModelControllerBase
 {
@@ -37,7 +64,7 @@ class RadvdController extends ApiMutableModelControllerBase
         }
         $node = $this->managedNode();
         if ($node === null) {
-            return ['status' => 'failed', 'message' => gettext('Router Advertisement settings not found.')];
+            return ['status' => 'failed', 'message' => I18n::gettext('Router Advertisement settings not found.')];
         }
         return [
             'status' => 'ok',
@@ -67,23 +94,24 @@ class RadvdController extends ApiMutableModelControllerBase
         $max = $node->MaxRtrAdvInterval->asInt();
         $min = $node->MinRtrAdvInterval->asInt();
         $router = $node->AdvDefaultLifetime->isEmpty() ? 3 * $max : $node->AdvDefaultLifetime->asInt();
-        $preferred = $node->AdvPreferredLifetime->isEmpty() ? 14400 : $node->AdvPreferredLifetime->asInt();
-        $valid = $node->AdvValidLifetime->isEmpty() ? 86400 : $node->AdvValidLifetime->asInt();
+        // Same HA-friendly defaults export.php applies; RFC 4862 5.5.3(e) caps what a host will honour.
+        $preferred = $node->AdvPreferredLifetime->isEmpty() ? 1800 : $node->AdvPreferredLifetime->asInt();
+        $valid = $node->AdvValidLifetime->isEmpty() ? 3600 : $node->AdvValidLifetime->asInt();
 
         if ($min < 3 || $min > 450 || $max < 4 || $max > 600 || $min > 0.75 * $max) {
-            throw new UserException(gettext('Router Advertisement intervals are outside the IPv6 HA limits.'), gettext('IPv6 HA validation'));
+            throw new UserException(I18n::gettext('Router Advertisement intervals are outside the IPv6 HA limits.'), I18n::gettext('IPv6 HA validation'));
         }
         if ($router < $max || $router > 1800) {
-            throw new UserException(gettext('Router lifetime must be between the maximum interval and 1800 seconds.'), gettext('IPv6 HA validation'));
+            throw new UserException(I18n::gettext('Router lifetime must be between the maximum interval and 1800 seconds.'), I18n::gettext('IPv6 HA validation'));
         }
         if ($preferred < $max || $preferred > 3600 || $valid < $preferred || $valid > 7200) {
-            throw new UserException(gettext('Prefix lifetimes are outside the IPv6 HA limits.'), gettext('IPv6 HA validation'));
+            throw new UserException(I18n::gettext('Prefix lifetimes are outside the IPv6 HA limits.'), I18n::gettext('IPv6 HA validation'));
         }
         if ($node->AdvRASrcAddress->isEmpty()) {
-            throw new UserException(gettext('A link-local CARP source address is required.'), gettext('IPv6 HA validation'));
+            throw new UserException(I18n::gettext('A link-local CARP source address is required.'), I18n::gettext('IPv6 HA validation'));
         }
         if ((string)$node->RemoveAdvOnExit === 'on' || (string)$node->DeprecatePrefix === 'on') {
-            throw new UserException(gettext('Shutdown advertisement and prefix deprecation must be Automatic or Off for shared CARP.'), gettext('IPv6 HA validation'));
+            throw new UserException(I18n::gettext('Shutdown advertisement and prefix deprecation must be Automatic or Off for shared CARP.'), I18n::gettext('IPv6 HA validation'));
         }
     }
 }

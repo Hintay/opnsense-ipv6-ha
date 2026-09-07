@@ -1,5 +1,0 @@
-#!/bin/sh
-rm -f /tmp/opnsense_menu_cache.xml /tmp/opnsense_acl_cache.json
-service configd restart
-configctl syslog restart
-echo 'IPv6 HA removed; config.xml and prefix history retained. Router Advertisement settings remain unchanged.'

@@ -1,5 +1,31 @@
 #!/usr/local/bin/php
 <?php
+
+/*
+ * Copyright (c) 2026 IPv6 HA contributors
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 require_once('config.inc');
 require_once('interfaces.inc');
 require_once('util.inc');
@@ -17,6 +43,8 @@ try {
     foreach (['enabled', 'maintenance'] as $key) {
         $result[$key] = $result[$key] === '1';
     }
+    // Fingerprint of the configuration this export was built from; the UI compares it with the running service.
+    $result['source_hash'] = \OPNsense\IPv6HA\SourceHash::current();
     if (!$result['enabled']) {
         echo json_encode($result, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR) . "\n";
         exit(0);
@@ -71,8 +99,9 @@ try {
     $result['min_interval'] = $value('MinRtrAdvInterval', 200);
     $result['max_interval'] = $value('MaxRtrAdvInterval', 600);
     $result['router_lifetime'] = $value('AdvDefaultLifetime', 3 * $result['max_interval']);
-    $result['preferred_lifetime'] = $value('AdvPreferredLifetime', 14400);
-    $result['valid_lifetime'] = $value('AdvValidLifetime', 86400);
+    // RFC 4862 5.5.3(e) lets hosts ignore lifetime cuts above two hours, so stay well inside that window.
+    $result['preferred_lifetime'] = $value('AdvPreferredLifetime', 1800);
+    $result['valid_lifetime'] = $value('AdvValidLifetime', 3600);
     $mtus = [];
     $availableInterfaces = function_exists('net_get_interfaces') ? net_get_interfaces() : [];
     foreach ([$result['lan'], $result['wan']] as $device) {
