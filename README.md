@@ -6,7 +6,7 @@ OPNsense IPv6 HA coordinates Router Advertisements on a CARP pair that receives 
 
 This is a community plugin and is not part of the official OPNsense plugin collection.
 
-Release 1.0 targets OPNsense 26.7 on FreeBSD 15 amd64.
+Release 1.1 targets OPNsense 26.7 on FreeBSD 15 amd64.
 
 ## Features
 
@@ -38,10 +38,10 @@ When PPPoE should connect or disconnect with the CARP role, configure that behav
 
 ## Installation
 
-Download `os-ipv6-ha-1.0.pkg` from the GitHub release and copy it to the firewall. The matching `os-ipv6-ha-1.0.pkg.dgst` file is optional and can be used to verify the download:
+Download `os-ipv6-ha-1.1.pkg` from the GitHub release and copy it to the firewall. The matching `os-ipv6-ha-1.1.pkg.dgst` file is optional and can be used to verify the download:
 
 ```sh
-FILE=os-ipv6-ha-1.0.pkg
+FILE=os-ipv6-ha-1.1.pkg
 for METHOD in md5 sha1 sha256 sha512; do
   openssl dgst "-${METHOD}" "$FILE" | sed 's/([^)]*)//g'
 done | diff -u "$FILE.dgst" -
@@ -50,7 +50,7 @@ done | diff -u "$FILE.dgst" -
 Install the package:
 
 ```sh
-pkg add -f ./os-ipv6-ha-1.0.pkg
+pkg add -f ./os-ipv6-ha-1.1.pkg
 ```
 
 Install the package on both nodes. Configure the standby node first, then the active node.
@@ -75,6 +75,8 @@ At runtime, Router Advertisements are sent only when all of the following are tr
 
 The service responds immediately to CARP and uplink events. A 30-second watchdog covers missed local events; it is not a public-connectivity probe.
 
+Prefix lifetimes are capped: the preferred lifetime may not exceed 3600 seconds and the valid lifetime may not exceed 7200 seconds. RFC 4862 lets hosts ignore a shorter valid lifetime while more than two hours remain, so longer values would make prefix withdrawal after a takeover ineffective. Empty lifetime fields default to 1800 and 3600 seconds.
+
 ## Operation
 
 ```sh
@@ -84,7 +86,11 @@ configctl ipv6ha apply
 pkg check -s os-ipv6-ha
 ```
 
-Logs are available from the plugin page and in `/var/log/ipv6ha/`.
+Saving or applying settings reloads the running service in place. The service is restarted only when the LAN, the uplink, the CARP address or the VHID changes.
+
+The service answers status queries on `/var/run/ipv6-ha.sock`. The plugin page and `configctl ipv6ha status` use this socket, so a stopped service is reported as stopped rather than as stale data.
+
+Logs are available from the plugin page and in `/var/log/ipv6ha/`. Messages from the plugin's own `radvd` instance appear in the system log under the program name `radvd`.
 
 Maintenance mode stops Router Advertisements on the current node without changing CARP or uplink settings. Stopping the plugin service has the same network scope.
 
@@ -111,6 +117,16 @@ The generated package is written to `dist/`. On stock FreeBSD builders, set `OPN
 ## Development
 
 Generic tests are in `tests/`. Some integration tests require an installed OPNsense MVC framework and must run directly on an isolated OPNsense test system.
+
+Interface text uses gettext with the plugin's own text domain `os-ipv6-ha`, because strings of community plugins are not part of the OPNsense language packages. Source strings are English; translations live in `locale/`. After changing user-visible text:
+
+```sh
+python3 tools/i18n.py extract
+python3 tools/i18n.py update
+python3 tools/i18n.py compile
+```
+
+Edit `locale/<language>.po` between `update` and `compile`. The compiled `.mo` files under `src/share/locale/` are committed so that both build paths ship them; `python3 tools/i18n.py check` fails when they are out of date. Any PO editor or a Weblate project pointed at `locale/` can be used for translation.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [SECURITY.md](SECURITY.md) for vulnerability reports.
 

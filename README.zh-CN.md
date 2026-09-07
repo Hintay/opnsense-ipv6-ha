@@ -6,7 +6,7 @@ OPNsense IPv6 HA 用于协调 CARP 主备节点上的路由通告，适用于上
 
 这是社区维护的插件，不属于 OPNsense 官方插件集合。
 
-1.0 版本面向运行于 FreeBSD 15 amd64 的 OPNsense 26.7。
+1.1 版本面向运行于 FreeBSD 15 amd64 的 OPNsense 26.7。
 
 ## 功能
 
@@ -38,10 +38,10 @@ OPNsense IPv6 HA 用于协调 CARP 主备节点上的路由通告，适用于上
 
 ## 安装
 
-从 GitHub Release 下载 `os-ipv6-ha-1.0.pkg` 并复制到防火墙。`os-ipv6-ha-1.0.pkg.dgst` 是可选的，可用于校验下载文件：
+从 GitHub Release 下载 `os-ipv6-ha-1.1.pkg` 并复制到防火墙。`os-ipv6-ha-1.1.pkg.dgst` 是可选的，可用于校验下载文件：
 
 ```sh
-FILE=os-ipv6-ha-1.0.pkg
+FILE=os-ipv6-ha-1.1.pkg
 for METHOD in md5 sha1 sha256 sha512; do
   openssl dgst "-${METHOD}" "$FILE" | sed 's/([^)]*)//g'
 done | diff -u "$FILE.dgst" -
@@ -50,7 +50,7 @@ done | diff -u "$FILE.dgst" -
 安装插件：
 
 ```sh
-pkg add -f ./os-ipv6-ha-1.0.pkg
+pkg add -f ./os-ipv6-ha-1.1.pkg
 ```
 
 两台节点都需要安装。建议先配置备用节点，再配置活动节点。
@@ -75,6 +75,8 @@ pkg add -f ./os-ipv6-ha-1.0.pkg
 
 服务会立即响应 CARP 和上游事件。30 秒看门狗仅用于补偿遗漏的本机事件，不会探测公网连通性。
 
+前缀生命期有上限：首选生命期不超过 3600 秒，有效生命期不超过 7200 秒。RFC 4862 允许主机在剩余有效期超过两小时时忽略更短的新值，更长的设置会让接管后的前缀撤回失效。生命期留空时默认为 1800 秒和 3600 秒。
+
 ## 日常操作
 
 ```sh
@@ -84,7 +86,11 @@ configctl ipv6ha apply
 pkg check -s os-ipv6-ha
 ```
 
-日志可在插件页面和 `/var/log/ipv6ha/` 中查看。
+保存或应用设置时会就地重载正在运行的服务，只有 LAN、上游接口、CARP 地址或 VHID 变化时才会重启服务。
+
+服务通过 `/var/run/ipv6-ha.sock` 应答状态查询。插件页面和 `configctl ipv6ha status` 都使用这个套接字，因此服务停止时会如实显示为已停止，而不是陈旧数据。
+
+日志可在插件页面和 `/var/log/ipv6ha/` 中查看。插件自带 `radvd` 实例的消息会以程序名 `radvd` 出现在系统日志中。
 
 本机维护模式只停止当前节点的路由通告，不改变 CARP 或上游设置。停止插件服务的影响范围相同。
 
@@ -111,6 +117,16 @@ python3 tools/build.py
 ## 开发
 
 通用测试位于 `tests/`。部分集成测试依赖完整的 OPNsense MVC 环境，应在隔离的 OPNsense 测试系统中执行。
+
+界面文本使用 gettext，文本域为插件自己的 `os-ipv6-ha`，因为社区插件的字串不会进入 OPNsense 的语言包。源字串为英文，翻译位于 `locale/`。修改用户可见文本后依次执行：
+
+```sh
+python3 tools/i18n.py extract
+python3 tools/i18n.py update
+python3 tools/i18n.py compile
+```
+
+在 `update` 与 `compile` 之间编辑 `locale/<语言>.po`。编译后的 `.mo` 文件位于 `src/share/locale/`，随仓库提交以便两条构建路径都能带上；`python3 tools/i18n.py check` 会在其过期时报错。任何 PO 编辑器或指向 `locale/` 的 Weblate 项目都可用于翻译。
 
 贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)，漏洞报告方式见 [SECURITY.md](SECURITY.md)。
 
