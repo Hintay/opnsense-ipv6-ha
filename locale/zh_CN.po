@@ -1,0 +1,576 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: os-ipv6-ha\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Language: zh_CN\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:67
+msgid "Router Advertisement settings not found."
+msgstr "未找到路由通告设置。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:102
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:105
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:108
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:111
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:114
+msgid "IPv6 HA validation"
+msgstr "IPv6 高可用校验"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:102
+msgid "Router Advertisement intervals are outside the IPv6 HA limits."
+msgstr "路由通告间隔超出 IPv6 高可用允许范围。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:105
+msgid "Router lifetime must be between the maximum interval and 1800 seconds."
+msgstr "路由器生命期必须介于最大通告间隔与 1800 秒之间。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:108
+msgid "Prefix lifetimes are outside the IPv6 HA limits."
+msgstr "前缀生命期超出 IPv6 高可用允许范围。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:111
+msgid "A link-local CARP source address is required."
+msgstr "必须指定链路本地 CARP 源地址。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/RadvdController.php:114
+msgid "Shutdown advertisement and prefix deprecation must be Automatic or Off for shared CARP."
+msgstr "共享 CARP 场景下，退出时通告与前缀弃用必须为“自动”或“关”。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/ServiceController.php:42
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/ServiceController.php:45
+msgid "Backend unavailable."
+msgstr "后端不可用。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/ServiceController.php:64
+msgid "Restart"
+msgstr "重启"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/ServiceController.php:65
+msgid "Start"
+msgstr "启动"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/Api/ServiceController.php:66
+msgid "Stop"
+msgstr "停止"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/forms/general.xml:4
+msgid "Enable IPv6 HA"
+msgstr "启用 IPv6 高可用"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/forms/general.xml:6
+msgid "Provide IPv6 service on the selected LAN from the active firewall."
+msgstr "由当前活动节点为所选 LAN 提供 IPv6 服务。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/forms/general.xml:10
+msgid "Maintenance mode on this node"
+msgstr "本机维护模式"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/forms/general.xml:12
+msgid "Pause Router Advertisements on this node. This setting persists across reboots."
+msgstr "暂停本节点的路由通告；此设置在重启后保留。"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/forms/general.xml:16
+msgid "LAN interface"
+msgstr "LAN 接口"
+
+#: src/opnsense/mvc/app/controllers/OPNsense/IPv6HA/forms/general.xml:18
+msgid "Select the LAN that should provide highly available IPv6 service."
+msgstr "选择需要 IPv6 高可用服务的 LAN。"
+
+#: src/opnsense/mvc/app/models/OPNsense/IPv6HA/ACL/ACL.xml:3
+msgid "Services: IPv6 HA (read)"
+msgstr "服务：IPv6 高可用（只读）"
+
+#: src/opnsense/mvc/app/models/OPNsense/IPv6HA/ACL/ACL.xml:4
+msgid "View IPv6 HA settings, status and logs"
+msgstr "查看 IPv6 高可用设置、状态与日志"
+
+#: src/opnsense/mvc/app/models/OPNsense/IPv6HA/ACL/ACL.xml:15
+msgid "Services: IPv6 HA (configure)"
+msgstr "服务：IPv6 高可用（配置）"
+
+#: src/opnsense/mvc/app/models/OPNsense/IPv6HA/ACL/ACL.xml:16
+msgid "Configure and apply IPv6 HA settings on this node"
+msgstr "在本节点配置并应用 IPv6 高可用设置"
+
+#: src/opnsense/mvc/app/models/OPNsense/IPv6HA/Menu/Menu.xml:3
+msgid "IPv6 HA"
+msgstr "IPv6 高可用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:11
+msgid "The active firewall provides IPv6 service. If the public IPv6 prefix changes after failover, devices must reconnect their IPv6 sessions."
+msgstr "IPv6 服务由当前活动节点提供。接管后如公网 IPv6 前缀发生变化，设备需要重新建立 IPv6 连接。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:12
+msgid "Loading local status…"
+msgstr "正在读取本机状态…"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:14
+msgid "Service"
+msgstr "服务"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:15
+msgid "IPv6 CARP"
+msgstr ""
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:16
+msgid "Uplink and Router Advertisements"
+msgstr "上游连接与路由通告"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:17
+msgid "Local LAN prefix"
+msgstr "本机 LAN 前缀"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:20
+msgid "High availability"
+msgstr "高可用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:21
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:133
+msgid "Router Advertisements"
+msgstr "路由通告"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:22
+msgid "Runtime details"
+msgstr "运行详情"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:23
+msgid "Logs"
+msgstr "日志"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:28
+msgid "Select the LAN to manage and pause advertisements on this node when needed."
+msgstr "选择需要管理的 LAN，并可在维护时暂停本节点的路由通告。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:32
+msgid "Save and apply"
+msgstr "保存并应用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:33
+msgid "Apply saved configuration"
+msgstr "应用已保存配置"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:34
+msgid "Check saved configuration"
+msgstr "检查已保存配置"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:40
+msgid "Configure the Router Advertisements sent to clients on the selected interface."
+msgstr "配置所选接口向客户端发送的路由通告。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:41
+msgid "Open the system Router Advertisements page"
+msgstr "打开系统路由通告页面"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:43
+msgid "Router Advertisement settings were not found for the selected interface. Add the interface on the system Router Advertisements page first."
+msgstr "找不到所选接口的路由通告设置。请先在系统路由通告页面中添加该接口。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:45
+msgid "Interface"
+msgstr "接口"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:49
+msgid "Enable advanced mode at the top of the page to show the remaining settings."
+msgstr "在页面顶部开启高级模式后，可查看其余设置。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:51
+msgid "Save and apply Router Advertisements"
+msgstr "保存并应用路由通告"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:52
+msgid "Reload"
+msgstr "重新加载"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:59
+msgid "Current Router Advertisement parameters"
+msgstr "当前路由通告参数"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:61
+msgid "Known prefixes"
+msgstr "已知前缀"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:62
+msgid "During takeover, the current prefix is advertised and older known prefixes are marked no longer preferred."
+msgstr "接管时发送当前前缀，并将仍在记录中的旧前缀设为不再首选。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:63
+msgid "Expires"
+msgstr "到期时间"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:63
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:152
+msgid "Prefix"
+msgstr "前缀"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:70
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:91
+msgid "Severity"
+msgstr "严重级别"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:71
+msgid "Emergency"
+msgstr "紧急"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:72
+msgid "Alert"
+msgstr "警报"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:73
+msgid "Critical"
+msgstr "严重"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:74
+msgid "Error"
+msgstr "错误"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:75
+msgid "Warning"
+msgstr "警告"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:76
+msgid "Notice"
+msgstr "通知"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:77
+msgid "Informational"
+msgstr "信息"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:78
+msgid "Debug"
+msgstr "调试"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:80
+msgid "History"
+msgstr "时间范围"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:81
+msgid "Last day"
+msgstr "最近一天"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:82
+msgid "Last week"
+msgstr "最近一周"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:83
+msgid "Last month"
+msgstr "最近一个月"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:84
+msgid "No limit"
+msgstr "不限"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:90
+msgid "Date"
+msgstr "日期"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:92
+msgid "Process"
+msgstr "进程"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:93
+msgid "Message"
+msgstr "消息"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:108
+msgid "Advertising"
+msgstr "通告中"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:109
+msgid "Applied; waiting for convergence"
+msgstr "已应用，正在等待状态稳定"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:110
+msgid "Automatic"
+msgstr "自动"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:111
+msgid "The service did not return a valid status."
+msgstr "服务未返回有效状态。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:112
+msgid "Unable to read or operate the service. Check permissions and connectivity."
+msgstr "无法读取或操作服务，请检查权限与连接。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:113
+msgid "Check passed"
+msgstr "检查通过"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:114
+msgid "Connected"
+msgstr "已连接"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:115
+msgid "Current advskew"
+msgstr "当前 advskew"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:116
+msgid "Default router lifetime"
+msgstr "默认路由寿命"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:117
+msgid "Disconnected"
+msgstr "未连接"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:118
+msgid "Link MTU"
+msgstr "链路 MTU"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:119
+msgid "Another operation is in progress."
+msgstr "已有其他操作正在进行。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:120
+msgid "The high availability settings are invalid."
+msgstr "高可用设置无效。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:121
+msgid "Configure a link-local IPv6 CARP address and select it as the Router Advertisement source."
+msgstr "请先配置链路本地 IPv6 CARP 地址，并将其选为路由通告源地址。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:122
+msgid "The selected LAN must use a DHCPv6-PD prefix from its uplink."
+msgstr "所选 LAN 必须使用上游接口提供的 DHCPv6-PD 前缀。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:123
+msgid "Turn off this interface on the system Router Advertisements page before enabling IPv6 HA."
+msgstr "启用 IPv6 高可用前，请先在系统路由通告页面关闭此接口。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:124
+msgid "The Router Advertisement settings are invalid."
+msgstr "路由通告设置无效。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:125
+msgid "Add Router Advertisement settings for the selected LAN first."
+msgstr "请先为所选 LAN 添加路由通告设置。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:126
+msgid "Remove Router Advertisements from high availability configuration synchronization."
+msgstr "请从高可用配置同步中移除路由通告。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:127
+msgid "Failed: "
+msgstr "失败："
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:128
+msgid "High"
+msgstr "高"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:129
+msgid "CARP VHID"
+msgstr ""
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:130
+msgid "LAN IPv6 address"
+msgstr "LAN IPv6 地址"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:131
+msgid "Last update"
+msgstr "最近更新"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:132
+msgid "Loading…"
+msgstr "正在读取…"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:134
+msgid "CARP state"
+msgstr "CARP 状态"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:135
+msgid "; "
+msgstr "；"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:136
+msgid "Low"
+msgstr "低"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:137
+msgid "Maintenance mode is enabled on this node."
+msgstr "本机维护模式已开启。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:138
+msgid "Maximum advertisement interval"
+msgstr "最大通告间隔"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:139
+msgid "Medium"
+msgstr "中"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:140
+msgid "Minimum advertisement interval"
+msgstr "最小通告间隔"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:141
+msgid "Assisted (DHCPv6 + SLAAC)"
+msgstr "辅助（DHCPv6 + SLAAC）"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:142
+msgid "Managed (DHCPv6)"
+msgstr "受管（DHCPv6）"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:143
+msgid "Router only"
+msgstr "仅路由"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:144
+msgid "Stateless (SLAAC + DHCPv6 options)"
+msgstr "无状态（SLAAC + DHCPv6 选项）"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:145
+msgid "Unmanaged (SLAAC)"
+msgstr "非受管（SLAAC）"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:146
+msgid "No"
+msgstr "否"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:147
+msgid "No valid prefix"
+msgstr "尚无有效前缀"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:148
+msgid "Normal advskew"
+msgstr "正常 advskew"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:149
+msgid "The saved configuration is not applied, or the service is still starting."
+msgstr "已保存配置尚未应用，或服务仍在启动。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:150
+msgid "Off"
+msgstr "关闭"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:151
+msgid "On"
+msgstr "开启"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:153
+msgid "Prefix preferred lifetime"
+msgstr "前缀首选寿命"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:154
+msgid "Prefix valid lifetime"
+msgstr "前缀有效寿命"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:155
+msgid "Processing…"
+msgstr "处理中…"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:156
+msgid "No Router Advertisement settings are loaded."
+msgstr "尚未加载路由通告设置。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:157
+msgid "Router Advertisement settings saved and applied"
+msgstr "路由通告设置已保存并应用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:158
+msgid "Saving Router Advertisement settings…"
+msgstr "正在保存路由通告设置…"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:159
+msgid "Advertisement source address"
+msgstr "通告源地址"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:160
+msgid "Details"
+msgstr "详情"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:161
+msgid "CARP administratively disabled"
+msgstr "CARP 已停用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:162
+msgid "Waiting for a stable CARP role"
+msgstr "正在等待 CARP 状态稳定"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:163
+msgid "LAN or CARP unavailable"
+msgstr "LAN 或 CARP 不可用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:164
+msgid "IPv6 HA maintenance enabled"
+msgstr "本机维护模式已开启"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:165
+msgid "No delegated prefix on the uplink"
+msgstr "上游尚未取得委派前缀"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:166
+msgid "Expected exactly one live LAN /64 inside current PD"
+msgstr "尚未取得可用的 LAN IPv6 前缀"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:167
+msgid "Delegated prefix is not global unicast"
+msgstr "委派前缀不是全局单播地址"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:168
+msgid "Uplink, PD and route ready"
+msgstr "上游连接、PD 与默认路由已就绪"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:169
+msgid "IPv6 default route is not using the selected uplink"
+msgstr "尚未取得 IPv6 默认路由"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:170
+msgid "Standby; waiting for CARP takeover"
+msgstr "待机，等待 CARP 接管"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:171
+msgid "Service stopped"
+msgstr "服务已停止"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:172
+msgid "Uplink is not ready"
+msgstr "上游连接尚未就绪"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:173
+msgid "Running"
+msgstr "运行中"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:174
+msgid "Saved configuration applied"
+msgstr "已保存配置已应用"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:175
+msgid "The service is not running; local IPv6 failover readiness cannot be confirmed."
+msgstr "服务未运行，不能确认本机 IPv6 接管能力。"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:176
+msgid "Service process"
+msgstr "服务进程"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:177
+msgid "Silent"
+msgstr "未通告"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:178
+msgid "Standby"
+msgstr "待机"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:179
+msgid "Status age (seconds)"
+msgstr "状态距今（秒）"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:180
+msgid "Stopped"
+msgstr "已停止"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:181
+msgid "Uplink interface"
+msgstr "上游接口"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:182
+msgid "unknown reason"
+msgstr "未知原因"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:183
+msgid "Unknown"
+msgstr "状态未知"
+
+#: src/opnsense/mvc/app/views/OPNsense/IPv6HA/index.volt:184
+msgid "Yes"
+msgstr "是"

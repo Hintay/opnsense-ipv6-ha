@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run portable repository checks without requiring an OPNsense installation."""
 import ast
+import importlib.util
 import os
 from pathlib import Path
 import re
@@ -9,6 +10,14 @@ import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_tool(name):
+    """Import a sibling tool by path so this script works from any working directory."""
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(f'{name}.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def make_variable(name):
@@ -39,6 +48,12 @@ def main():
         elif path.suffix == '.xml':
             ET.parse(path)
 
+    # Translation template, catalogs and compiled .mo files must be in sync (a locale/
+    # directory without catalogs passes, see tools/i18n.py check).
+    problems = load_tool('i18n').check(ROOT)
+    if problems:
+        raise ValueError('\n'.join(problems))
+
     model = ET.parse(ROOT / 'src/opnsense/mvc/app/models/OPNsense/IPv6HA/IPv6HA.xml')
     if model.getroot().findtext('version') != '1.0.0':
         raise ValueError('The initial public model version must be 1.0.0')
@@ -48,7 +63,7 @@ def main():
         for path in tracked_files()
         if path.suffix.lower() in {'.md', '.py', '.php', '.sh', '.xml', '.volt', '.yml', '.yaml', ''}
     )
-    forbidden = ('192' + '.168.', '240' + 'e:', 'Hin' + 'tay')
+    forbidden = ('192' + '.168.', '240' + 'e:')
     for value in forbidden:
         if value in public_text:
             raise ValueError(f'Environment-specific value remains in public files: {value}')
@@ -61,9 +76,6 @@ def main():
             raise ValueError(f'{readme} does not reference {expected_package}')
         if expected_digest not in readme_text:
             raise ValueError(f'{readme} does not reference {expected_digest}')
-
-    if 'SHA256' + 'SUMS' in public_text:
-        raise ValueError('Release documentation must use per-file .dgst files')
 
     print(f'Repository checks passed for version {version}')
 

@@ -72,7 +72,10 @@ def main():
         code, page = request('/ui/ipv6ha/')
         assert code == 200 and 'frm_IPv6HA' in page and 'frm_RadvdManaged' in page, (code, str(page)[:300])
         assert ('保存并应用' in page) != ('Save and apply' in page), 'Expected one active UI locale'
-        assert 'var tx = {' in page and 'var tx = {&quot;' not in page, 'Translation JSON was HTML-escaped'
+        assert 'var tx = {' in page, 'Translation object is missing'
+        tx_block = page.split('var tx = {', 1)[1].split('};', 1)[0]
+        assert re.match(r"\s+advertising: '[^']+',", tx_block), 'Translation object is not a plain JS literal'
+        assert '&quot;' not in tx_block and '&#039;' not in tx_block, 'Translated JS strings were HTML-escaped'
         assert 'Fatal error' not in page and 'Traceback' not in page
         assert 'grid-ipv6ha-log' in page and '/api/diagnostics/log/core/ipv6ha' in page
         assert 'function backendMessage(value)' in page and 'xhr.responseJSON || {}' in page
@@ -107,7 +110,7 @@ def main():
         assert original['maintenance'] == '0', 'Run this smoke test outside maintenance'
         print('PASS: authenticated settings and status endpoints')
         code, state = request('/api/ipv6ha/service/status')
-        assert code == 200 and state['status'] == 'running' and state['fresh'], (code, state)
+        assert code == 200 and state['status'] == 'running' and state['service_running'], (code, state)
         if '--service-controls' in sys.argv:
             assert state['runtime']['carp'] == 'BACKUP', 'Service controls must be tested on BACKUP'
             code, result = request('/api/ipv6ha/service/stop', {})
@@ -115,7 +118,7 @@ def main():
             wait_status(lambda item: item['status'] == 'stopped' and not item['service_running'])
             code, result = request('/api/ipv6ha/service/start', {})
             assert code == 200 and result.get('status') == 'ok', (code, result)
-            state = wait_status(lambda item: item['status'] == 'running' and item['fresh'])
+            state = wait_status(lambda item: item['status'] == 'running' and item['service_running'])
             assert state['runtime']['carp'] == 'BACKUP' and not state['runtime']['ra_running'], state
             print('PASS: title bar stop and start controls operate only the standby plugin service')
         code, managed_ra = request('/api/ipv6ha/radvd/get')
