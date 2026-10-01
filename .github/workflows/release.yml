@@ -37,7 +37,7 @@ jobs:
           echo "SOURCE_DATE_EPOCH=${timestamp}" >> "${GITHUB_ENV}"
 
       - name: Build package on FreeBSD
-        uses: vmactions/freebsd-vm@v1.5.5
+        uses: vmactions/freebsd-vm@v1.5.8
         with:
           release: '15.0'
           envs: 'OPNSENSE_VERSION SOURCE_DATE_EPOCH GITHUB_REPOSITORY'
